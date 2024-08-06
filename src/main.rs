@@ -1,4 +1,5 @@
 use std::{env, fs, str};
+use text_io::read;
 
 #[derive(Clone)]
 enum Instruction {
@@ -72,14 +73,18 @@ fn execute(bytecode: &Bytecode) -> () {
     let mut memory = [0u8; MEMORY_SIZE];
     let mut data_pointer: usize = 0;
     let mut instruction_pointer: usize = 0;
-    while instruction_pointer < bytecode.len() {
+    while instruction_pointer < bytecode.len() && data_pointer < MEMORY_SIZE {
         match bytecode[instruction_pointer] {
             Instruction::IncPointer => data_pointer += 1,
             Instruction::DecPointer => data_pointer -= 1,
             Instruction::IncByte => memory[data_pointer] += 1,
             Instruction::DecByte => memory[data_pointer] -= 1,
             Instruction::Output => print_byte(&memory[data_pointer]),
-            Instruction::Input => (), // TODO
+            Instruction::Input => {
+                let input: String = read!("{}\n");
+                let input_byte = input.as_bytes()[0];
+                memory[data_pointer] = input_byte;
+            }
             Instruction::OpenBracket {
                 matching_location: jump_location,
             } => {
