@@ -33,6 +33,18 @@ fn parse_character(character: char) -> Option<Instruction> {
 }
 
 fn match_brackets(bytecode: &Bytecode) -> Bytecode {
+    let open_count = bytecode
+        .iter()
+        .filter(|instruction| matches!(instruction, Instruction::EmptyOpenBracket))
+        .count();
+    let close_count = bytecode
+        .iter()
+        .filter(|instruction| matches!(instruction, Instruction::EmptyCloseBracket))
+        .count();
+    if open_count != close_count {
+        panic!("Unbalanced brackets")
+    }
+
     let mut result = bytecode.clone();
     let mut open_locations = Vec::new();
     for (i, instruction) in bytecode.iter().enumerate() {
