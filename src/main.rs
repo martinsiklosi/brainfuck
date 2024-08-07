@@ -29,6 +29,17 @@ impl fmt::Display for CompileError {
     }
 }
 
+#[derive(Debug)]
+struct RuntimeError {
+    message: String,
+}
+
+impl fmt::Display for RuntimeError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "RuntimeError: {}", self.message)
+    }
+}
+
 fn parse_character(character: char) -> Option<Instruction> {
     match character {
         '>' => Some(Instruction::IncPointer),
@@ -85,12 +96,12 @@ fn compile(source_code: String) -> Result<Bytecode, CompileError> {
     match_brackets(&bytecode)
 }
 
-fn execute(bytecode: &Bytecode) {
+fn execute(bytecode: &Bytecode) -> Result<(), RuntimeError> {
     const MEMORY_SIZE: usize = 30_000;
     let mut memory = [0u8; MEMORY_SIZE];
     let mut data_pointer = 0;
     let mut instruction_pointer = 0;
-    while instruction_pointer < bytecode.len() && data_pointer < MEMORY_SIZE {
+    while instruction_pointer < bytecode.len() {
         match bytecode[instruction_pointer] {
             Instruction::IncPointer => data_pointer += 1,
             Instruction::DecPointer => data_pointer -= 1,
@@ -120,7 +131,13 @@ fn execute(bytecode: &Bytecode) {
             _ => (),
         }
         instruction_pointer += 1;
+        if data_pointer >= MEMORY_SIZE {
+            return Err(RuntimeError {
+                message: "Exceeded memory bounds".to_string(),
+            });
+        }
     }
+    Ok(())
 }
 
 #[derive(Parser)]
@@ -144,5 +161,11 @@ fn main() {
             process::exit(1);
         }
     };
-    execute(&bytecode);
+    match execute(&bytecode) {
+        Ok(_) => (),
+        Err(error) => {
+            println!("{}", error);
+            process::exit(1);
+        }
+    };
 }
