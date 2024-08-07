@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::{fs, str};
+use std::{fmt, fs, process, str};
 use text_io::read;
 
 #[derive(Clone)]
@@ -18,6 +18,17 @@ enum Instruction {
 
 type Bytecode = Vec<Instruction>;
 
+#[derive(Debug)]
+struct CompileError {
+    message: String,
+}
+
+impl fmt::Display for CompileError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "CompileError: {}", self.message)
+    }
+}
+
 fn parse_character(character: char) -> Option<Instruction> {
     match character {
         '>' => Some(Instruction::IncPointer),
@@ -32,7 +43,7 @@ fn parse_character(character: char) -> Option<Instruction> {
     }
 }
 
-fn match_brackets(bytecode: &Bytecode) -> Bytecode {
+fn match_brackets(bytecode: &Bytecode) -> Result<Bytecode, CompileError> {
     let open_count = bytecode
         .iter()
         .filter(|instruction| matches!(instruction, Instruction::EmptyOpenBracket))
@@ -42,7 +53,9 @@ fn match_brackets(bytecode: &Bytecode) -> Bytecode {
         .filter(|instruction| matches!(instruction, Instruction::EmptyCloseBracket))
         .count();
     if open_count != close_count {
-        panic!("Unbalanced brackets")
+        return Err(CompileError {
+            message: "Unbalanced brackets".to_string(),
+        });
     }
 
     let mut result = bytecode.clone();
@@ -64,10 +77,10 @@ fn match_brackets(bytecode: &Bytecode) -> Bytecode {
             _ => (),
         }
     }
-    result
+    Ok(result)
 }
 
-fn compile(source_code: String) -> Bytecode {
+fn compile(source_code: String) -> Result<Bytecode, CompileError> {
     let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
     match_brackets(&bytecode)
 }
@@ -117,7 +130,19 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let source_code = fs::read_to_string(args.path).expect("Path should be valid");
-    let bytecode = compile(source_code);
+    let source_code = match fs::read_to_string(args.path) {
+        Ok(source_code) => source_code,
+        Err(error) => {
+            println!("{}", error);
+            process::exit(1)
+        }
+    };
+    let bytecode = match compile(source_code) {
+        Ok(bytecode) => bytecode,
+        Err(error) => {
+            println!("{}", error);
+            process::exit(1);
+        }
+    };
     execute(&bytecode);
 }
