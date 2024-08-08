@@ -1,6 +1,7 @@
 use clap::Parser;
-use std::{collections::VecDeque, fmt, fs, process, str};
+use std::{collections::VecDeque, fs, process, str};
 use text_io::read;
+use thiserror::Error;
 
 #[derive(Clone)]
 enum Instruction {
@@ -18,26 +19,16 @@ enum Instruction {
 
 type Bytecode = Vec<Instruction>;
 
-#[derive(Debug)]
+#[derive(Error, Debug)]
+#[error("{message}")]
 struct CompileError {
     message: String,
 }
 
-impl fmt::Display for CompileError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "CompileError: {}", self.message)
-    }
-}
-
-#[derive(Debug)]
+#[derive(Error, Debug)]
+#[error("{message}")]
 struct RuntimeError {
     message: String,
-}
-
-impl fmt::Display for RuntimeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "RuntimeError: {}", self.message)
-    }
 }
 
 fn parse_character(character: char) -> Option<Instruction> {
