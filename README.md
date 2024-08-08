@@ -22,9 +22,9 @@ brainfuck <PATH>
 
 ## Implementation Decisions
 The memory is dynamically allocated, giving the Brainfuck program practically infinite memory.
-In reality, the memory is limited by the memory of your machine and the maximum size of the data pointer in the implementation
-(18,446,744,073,709,551,615 bytes on a 64-bit system,
-4,294,967,295 bytes on a 32-bit system).
+In reality, the memory is limited by the limitations of your machine, what the os will let you do, and the maximum size of the data pointer in the implementation
+(18,446,744,073,709,551,615 on a 64-bit system,
+4,294,967,295 on a 32-bit system).
 
 ## Misc
 The `samples` directory contains some example Brainfuck programs, some cool programs taken from the internet, and a couple of test cases.
