@@ -57,16 +57,15 @@ fn brackets_are_balanced(bytecode: &Bytecode) -> bool {
     open_count == close_count
 }
 
-fn match_brackets(bytecode: &Bytecode) -> Result<Bytecode, CompileError> {
-    if !brackets_are_balanced(bytecode) {
+fn match_brackets(mut bytecode: Bytecode) -> Result<Bytecode, CompileError> {
+    if !brackets_are_balanced(&bytecode) {
         return Err(CompileError {
             message: "Unbalanced brackets".to_string(),
         });
     }
 
-    let mut result = bytecode.clone();
     let mut open_locations_stack = Vec::new();
-    for (i, instruction) in bytecode.iter().enumerate() {
+    for (i, instruction) in bytecode.clone().iter().enumerate() {
         match instruction {
             Instruction::EmptyOpenBracket => {
                 open_locations_stack.push(i);
@@ -75,20 +74,20 @@ fn match_brackets(bytecode: &Bytecode) -> Result<Bytecode, CompileError> {
                 let open_location = open_locations_stack
                     .pop()
                     .expect("Brackets should be balanced");
-                result[i] = Instruction::CloseBracket {
+                bytecode[i] = Instruction::CloseBracket {
                     jump_location: open_location,
                 };
-                result[open_location] = Instruction::OpenBracket { jump_location: i };
+                bytecode[open_location] = Instruction::OpenBracket { jump_location: i };
             }
             _ => (),
         }
     }
-    Ok(result)
+    Ok(bytecode)
 }
 
 fn compile(source_code: String) -> Result<Bytecode, CompileError> {
     let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
-    match_brackets(&bytecode)
+    match_brackets(bytecode)
 }
 
 struct State {
