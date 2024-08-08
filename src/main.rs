@@ -21,14 +21,14 @@ type Bytecode = Vec<Instruction>;
 
 #[derive(Error, Debug)]
 #[error("{message}")]
-struct CompileError {
-    message: String,
+struct CompileError<'a> {
+    message: &'a str,
 }
 
 #[derive(Error, Debug)]
 #[error("{message}")]
-struct RuntimeError {
-    message: String,
+struct RuntimeError<'a> {
+    message: &'a str,
 }
 
 fn parse_character(character: char) -> Option<Instruction> {
@@ -57,10 +57,10 @@ fn brackets_are_balanced(bytecode: &Bytecode) -> bool {
     open_count == close_count
 }
 
-fn match_brackets(mut bytecode: Bytecode) -> Result<Bytecode, CompileError> {
+fn match_brackets<'a>(mut bytecode: Bytecode) -> Result<Bytecode, CompileError<'a>> {
     if !brackets_are_balanced(&bytecode) {
         return Err(CompileError {
-            message: "Unbalanced brackets".to_string(),
+            message: "Unbalanced brackets",
         });
     }
 
@@ -85,7 +85,7 @@ fn match_brackets(mut bytecode: Bytecode) -> Result<Bytecode, CompileError> {
     Ok(bytecode)
 }
 
-fn compile(source_code: String) -> Result<Bytecode, CompileError> {
+fn compile<'a>(source_code: String) -> Result<Bytecode, CompileError<'a>> {
     let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
     match_brackets(bytecode)
 }
@@ -105,10 +105,10 @@ impl State {
         }
     }
 
-    fn inc_pointer(mut self) -> Result<Self, RuntimeError> {
+    fn inc_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         if self.data_pointer == usize::MAX {
             return Err(RuntimeError {
-                message: "Out of memory".to_string(),
+                message: "Out of memory",
             });
         }
         self.data_pointer += 1;
@@ -119,10 +119,10 @@ impl State {
         Ok(self)
     }
 
-    fn dec_pointer(mut self) -> Result<Self, RuntimeError> {
+    fn dec_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         if self.data_pointer == 0 && self.memory.len() == usize::MAX {
             return Err(RuntimeError {
-                message: "Out of memory".to_string(),
+                message: "Out of memory",
             });
         }
         if self.data_pointer == 0 {
@@ -134,31 +134,31 @@ impl State {
         Ok(self)
     }
 
-    fn inc_byte(mut self) -> Result<Self, RuntimeError> {
+    fn inc_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         self.memory[self.data_pointer] += 1;
         self.instruction_pointer += 1;
         Ok(self)
     }
 
-    fn dec_byte(mut self) -> Result<Self, RuntimeError> {
+    fn dec_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         self.memory[self.data_pointer] -= 1;
         self.instruction_pointer += 1;
         Ok(self)
     }
 
-    fn output(mut self) -> Result<Self, RuntimeError> {
+    fn output<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         print!("{}", self.memory[self.data_pointer] as char);
         self.instruction_pointer += 1;
         Ok(self)
     }
 
-    fn input(mut self) -> Result<Self, RuntimeError> {
+    fn input<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
         let input: String = read!("{}\n");
         match input.bytes().next() {
             Some(byte) => self.memory[self.data_pointer] = byte,
             None => {
                 return Err(RuntimeError {
-                    message: "Error taking input".to_string(),
+                    message: "Error taking input",
                 })
             }
         }
@@ -166,7 +166,7 @@ impl State {
         Ok(self)
     }
 
-    fn open_bracket(mut self, jump_location: usize) -> Result<Self, RuntimeError> {
+    fn open_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
         if self.memory[self.data_pointer] == 0 {
             self.instruction_pointer = jump_location;
         } else {
@@ -175,7 +175,7 @@ impl State {
         Ok(self)
     }
 
-    fn close_bracket(mut self, jump_location: usize) -> Result<Self, RuntimeError> {
+    fn close_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
         if self.memory[self.data_pointer] != 0 {
             self.instruction_pointer = jump_location;
         } else {
