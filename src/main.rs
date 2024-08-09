@@ -5,16 +5,16 @@ use thiserror::Error;
 
 #[derive(Clone)]
 enum Instruction {
-    IncPointer,
-    DecPointer,
-    IncByte,
-    DecByte,
-    Output,
-    Input,
-    EmptyOpenBracket,
-    EmptyCloseBracket,
-    OpenBracket { jump_location: usize },
-    CloseBracket { jump_location: usize },
+	IncPointer,
+	DecPointer,
+	IncByte,
+	DecByte,
+	Output,
+	Input,
+	EmptyOpenBracket,
+	EmptyCloseBracket,
+	OpenBracket { jump_location: usize },
+	CloseBracket { jump_location: usize },
 }
 
 type Bytecode = Vec<Instruction>;
@@ -22,220 +22,220 @@ type Bytecode = Vec<Instruction>;
 #[derive(Error, Debug)]
 #[error("{message}")]
 struct CompileError<'a> {
-    message: &'a str,
+	message: &'a str,
 }
 
 #[derive(Error, Debug)]
 #[error("{message}")]
 struct RuntimeError<'a> {
-    message: &'a str,
+	message: &'a str,
 }
 
 fn parse_character(character: char) -> Option<Instruction> {
-    match character {
-        '>' => Some(Instruction::IncPointer),
-        '<' => Some(Instruction::DecPointer),
-        '+' => Some(Instruction::IncByte),
-        '-' => Some(Instruction::DecByte),
-        '.' => Some(Instruction::Output),
-        ',' => Some(Instruction::Input),
-        '[' => Some(Instruction::EmptyOpenBracket),
-        ']' => Some(Instruction::EmptyCloseBracket),
-        _ => None,
-    }
+	match character {
+		'>' => Some(Instruction::IncPointer),
+		'<' => Some(Instruction::DecPointer),
+		'+' => Some(Instruction::IncByte),
+		'-' => Some(Instruction::DecByte),
+		'.' => Some(Instruction::Output),
+		',' => Some(Instruction::Input),
+		'[' => Some(Instruction::EmptyOpenBracket),
+		']' => Some(Instruction::EmptyCloseBracket),
+		_ => None,
+	}
 }
 
 fn brackets_are_balanced(bytecode: &Bytecode) -> bool {
-    let open_count = bytecode
-        .iter()
-        .filter(|instruction| matches!(instruction, Instruction::EmptyOpenBracket))
-        .count();
-    let close_count = bytecode
-        .iter()
-        .filter(|instruction| matches!(instruction, Instruction::EmptyCloseBracket))
-        .count();
-    open_count == close_count
+	let open_count = bytecode
+		.iter()
+		.filter(|instruction| matches!(instruction, Instruction::EmptyOpenBracket))
+		.count();
+	let close_count = bytecode
+		.iter()
+		.filter(|instruction| matches!(instruction, Instruction::EmptyCloseBracket))
+		.count();
+	open_count == close_count
 }
 
 fn match_brackets<'a>(mut bytecode: Bytecode) -> Result<Bytecode, CompileError<'a>> {
-    if !brackets_are_balanced(&bytecode) {
-        return Err(CompileError {
-            message: "Unbalanced brackets",
-        });
-    }
+	if !brackets_are_balanced(&bytecode) {
+		return Err(CompileError {
+			message: "Unbalanced brackets",
+		});
+	}
 
-    let mut open_locations_stack = Vec::new();
-    for (i, instruction) in bytecode.clone().iter().enumerate() {
-        match instruction {
-            Instruction::EmptyOpenBracket => {
-                open_locations_stack.push(i);
-            }
-            Instruction::EmptyCloseBracket => {
-                let open_location = open_locations_stack
-                    .pop()
-                    .expect("Brackets should be balanced");
-                bytecode[i] = Instruction::CloseBracket {
-                    jump_location: open_location,
-                };
-                bytecode[open_location] = Instruction::OpenBracket { jump_location: i };
-            }
-            _ => (),
-        }
-    }
-    Ok(bytecode)
+	let mut open_locations_stack = Vec::new();
+	for (i, instruction) in bytecode.clone().iter().enumerate() {
+		match instruction {
+			Instruction::EmptyOpenBracket => {
+				open_locations_stack.push(i);
+			}
+			Instruction::EmptyCloseBracket => {
+				let open_location = open_locations_stack
+					.pop()
+					.expect("Brackets should be balanced");
+				bytecode[i] = Instruction::CloseBracket {
+					jump_location: open_location,
+				};
+				bytecode[open_location] = Instruction::OpenBracket { jump_location: i };
+			}
+			_ => (),
+		}
+	}
+	Ok(bytecode)
 }
 
 fn compile<'a>(source_code: String) -> Result<Bytecode, CompileError<'a>> {
-    let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
-    match_brackets(bytecode)
+	let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
+	match_brackets(bytecode)
 }
 
 struct State {
-    memory: VecDeque<u8>,
-    data_pointer: usize,
-    instruction_pointer: usize,
+	memory: VecDeque<u8>,
+	data_pointer: usize,
+	instruction_pointer: usize,
 }
 
 impl State {
-    fn new() -> Self {
-        Self {
-            memory: VecDeque::from(vec![0u8]),
-            data_pointer: 0,
-            instruction_pointer: 0,
-        }
-    }
+	fn new() -> Self {
+		Self {
+			memory: VecDeque::from(vec![0u8]),
+			data_pointer: 0,
+			instruction_pointer: 0,
+		}
+	}
 
-    fn inc_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        if self.data_pointer == usize::MAX {
-            return Err(RuntimeError {
-                message: "Out of memory",
-            });
-        }
-        self.data_pointer += 1;
-        if self.data_pointer == self.memory.len() {
-            self.memory.push_back(0u8);
-        }
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn inc_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		if self.data_pointer == usize::MAX {
+			return Err(RuntimeError {
+				message: "Out of memory",
+			});
+		}
+		self.data_pointer += 1;
+		if self.data_pointer == self.memory.len() {
+			self.memory.push_back(0u8);
+		}
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn dec_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        if self.data_pointer == 0 && self.memory.len() == usize::MAX {
-            return Err(RuntimeError {
-                message: "Out of memory",
-            });
-        }
-        if self.data_pointer == 0 {
-            self.memory.push_front(0u8);
-        } else {
-            self.data_pointer -= 1;
-        }
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn dec_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		if self.data_pointer == 0 && self.memory.len() == usize::MAX {
+			return Err(RuntimeError {
+				message: "Out of memory",
+			});
+		}
+		if self.data_pointer == 0 {
+			self.memory.push_front(0u8);
+		} else {
+			self.data_pointer -= 1;
+		}
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn inc_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_add(1);
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn inc_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_add(1);
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn dec_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_sub(1);
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn dec_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_sub(1);
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn output<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        print!("{}", self.memory[self.data_pointer] as char);
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn output<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		print!("{}", self.memory[self.data_pointer] as char);
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn input<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        let input: String = read!("{}\n");
-        match input.bytes().next() {
-            Some(byte) => self.memory[self.data_pointer] = byte,
-            None => {
-                return Err(RuntimeError {
-                    message: "Error taking input",
-                })
-            }
-        }
-        self.instruction_pointer += 1;
-        Ok(self)
-    }
+	fn input<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+		let input: String = read!("{}\n");
+		match input.bytes().next() {
+			Some(byte) => self.memory[self.data_pointer] = byte,
+			None => {
+				return Err(RuntimeError {
+					message: "Error taking input",
+				})
+			}
+		}
+		self.instruction_pointer += 1;
+		Ok(self)
+	}
 
-    fn open_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
-        if self.memory[self.data_pointer] == 0 {
-            self.instruction_pointer = jump_location;
-        } else {
-            self.instruction_pointer += 1;
-        }
-        Ok(self)
-    }
+	fn open_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
+		if self.memory[self.data_pointer] == 0 {
+			self.instruction_pointer = jump_location;
+		} else {
+			self.instruction_pointer += 1;
+		}
+		Ok(self)
+	}
 
-    fn close_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
-        if self.memory[self.data_pointer] != 0 {
-            self.instruction_pointer = jump_location;
-        } else {
-            self.instruction_pointer += 1;
-        }
-        Ok(self)
-    }
+	fn close_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
+		if self.memory[self.data_pointer] != 0 {
+			self.instruction_pointer = jump_location;
+		} else {
+			self.instruction_pointer += 1;
+		}
+		Ok(self)
+	}
 }
 
 fn execute(bytecode: &Bytecode) -> Result<(), RuntimeError> {
-    let mut state = State::new();
-    while state.instruction_pointer < bytecode.len() {
-        match bytecode[state.instruction_pointer] {
-            Instruction::IncPointer => {
-                state = state.inc_pointer()?;
-            }
-            Instruction::DecPointer => {
-                state = state.dec_pointer()?;
-            }
-            Instruction::IncByte => {
-                state = state.inc_byte()?;
-            }
-            Instruction::DecByte => {
-                state = state.dec_byte()?;
-            }
-            Instruction::Output => {
-                state = state.output()?;
-            }
-            Instruction::Input => {
-                state = state.input()?;
-            }
-            Instruction::OpenBracket { jump_location } => {
-                state = state.open_bracket(jump_location)?;
-            }
-            Instruction::CloseBracket { jump_location } => {
-                state = state.close_bracket(jump_location)?;
-            }
-            _ => (),
-        }
-    }
-    Ok(())
+	let mut state = State::new();
+	while state.instruction_pointer < bytecode.len() {
+		match bytecode[state.instruction_pointer] {
+			Instruction::IncPointer => {
+				state = state.inc_pointer()?;
+			}
+			Instruction::DecPointer => {
+				state = state.dec_pointer()?;
+			}
+			Instruction::IncByte => {
+				state = state.inc_byte()?;
+			}
+			Instruction::DecByte => {
+				state = state.dec_byte()?;
+			}
+			Instruction::Output => {
+				state = state.output()?;
+			}
+			Instruction::Input => {
+				state = state.input()?;
+			}
+			Instruction::OpenBracket { jump_location } => {
+				state = state.open_bracket(jump_location)?;
+			}
+			Instruction::CloseBracket { jump_location } => {
+				state = state.close_bracket(jump_location)?;
+			}
+			_ => (),
+		}
+	}
+	Ok(())
 }
 
 #[derive(Parser)]
 struct Args {
-    path: String,
+	path: String,
 }
 
 fn main() {
-    let args = Args::parse();
-    let source_code = fs::read_to_string(args.path).unwrap_or_else(|error| {
-        println!("{}", error);
-        process::exit(1)
-    });
-    let bytecode = compile(source_code).unwrap_or_else(|error| {
-        println!("{}", error);
-        process::exit(1);
-    });
-    execute(&bytecode).unwrap_or_else(|error| {
-        println!("{}", error);
-        process::exit(1);
-    });
+	let args = Args::parse();
+	let source_code = fs::read_to_string(args.path).unwrap_or_else(|error| {
+		println!("{}", error);
+		process::exit(1)
+	});
+	let bytecode = compile(source_code).unwrap_or_else(|error| {
+		println!("{}", error);
+		process::exit(1);
+	});
+	execute(&bytecode).unwrap_or_else(|error| {
+		println!("{}", error);
+		process::exit(1);
+	});
 }
