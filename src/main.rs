@@ -135,13 +135,13 @@ impl State {
     }
 
     fn inc_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        self.memory[self.data_pointer] += 1;
+        self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_add(1);
         self.instruction_pointer += 1;
         Ok(self)
     }
 
     fn dec_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
-        self.memory[self.data_pointer] -= 1;
+        self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_sub(1);
         self.instruction_pointer += 1;
         Ok(self)
     }
