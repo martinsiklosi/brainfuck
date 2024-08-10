@@ -21,15 +21,15 @@ type Bytecode = Vec<Instruction>;
 
 #[derive(Error, Debug)]
 enum CompileError {
-	#[error("Unbalanced brackets")]
+	#[error("Compile error: Unbalanced brackets")]
 	UnbalancedBrackets,
 }
 
 #[derive(Error, Debug)]
 enum RuntimeError {
-	#[error("Out of memory")]
+	#[error("Runtime error: Out of memory")]
 	OutOfMemory,
-	#[error("Input failed")]
+	#[error("Runtime error: Input failed")]
 	InputFailed,
 }
 
