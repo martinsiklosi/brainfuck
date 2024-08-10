@@ -20,15 +20,17 @@ enum Instruction {
 type Bytecode = Vec<Instruction>;
 
 #[derive(Error, Debug)]
-#[error("{message}")]
-struct CompileError<'a> {
-	message: &'a str,
+enum CompileError {
+	#[error("Unbalanced brackets")]
+	UnbalancedBrackets,
 }
 
 #[derive(Error, Debug)]
-#[error("{message}")]
-struct RuntimeError<'a> {
-	message: &'a str,
+enum RuntimeError {
+	#[error("Out of memory")]
+	OutOfMemory,
+	#[error("Input failed")]
+	InputFailed,
 }
 
 fn parse_character(character: char) -> Option<Instruction> {
@@ -57,11 +59,9 @@ fn brackets_are_balanced(bytecode: &Bytecode) -> bool {
 	open_count == close_count
 }
 
-fn match_brackets<'a>(mut bytecode: Bytecode) -> Result<Bytecode, CompileError<'a>> {
+fn match_brackets(mut bytecode: Bytecode) -> Result<Bytecode, CompileError> {
 	if !brackets_are_balanced(&bytecode) {
-		return Err(CompileError {
-			message: "Unbalanced brackets",
-		});
+		return Err(CompileError::UnbalancedBrackets);
 	}
 
 	let mut open_locations_stack = Vec::new();
@@ -85,7 +85,7 @@ fn match_brackets<'a>(mut bytecode: Bytecode) -> Result<Bytecode, CompileError<'
 	Ok(bytecode)
 }
 
-fn compile<'a>(source_code: String) -> Result<Bytecode, CompileError<'a>> {
+fn compile(source_code: String) -> Result<Bytecode, CompileError> {
 	let bytecode: Vec<Instruction> = source_code.chars().filter_map(parse_character).collect();
 	match_brackets(bytecode)
 }
@@ -105,11 +105,9 @@ impl State {
 		}
 	}
 
-	fn inc_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn inc_pointer(mut self) -> Result<Self, RuntimeError> {
 		if self.data_pointer == usize::MAX {
-			return Err(RuntimeError {
-				message: "Out of memory",
-			});
+			return Err(RuntimeError::OutOfMemory);
 		}
 		self.data_pointer += 1;
 		if self.data_pointer == self.memory.len() {
@@ -119,11 +117,9 @@ impl State {
 		Ok(self)
 	}
 
-	fn dec_pointer<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn dec_pointer(mut self) -> Result<Self, RuntimeError> {
 		if self.data_pointer == 0 && self.memory.len() == usize::MAX {
-			return Err(RuntimeError {
-				message: "Out of memory",
-			});
+			return Err(RuntimeError::OutOfMemory);
 		}
 		if self.data_pointer == 0 {
 			self.memory.push_front(0u8);
@@ -134,39 +130,32 @@ impl State {
 		Ok(self)
 	}
 
-	fn inc_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn inc_byte(mut self) -> Result<Self, RuntimeError> {
 		self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_add(1);
 		self.instruction_pointer += 1;
 		Ok(self)
 	}
 
-	fn dec_byte<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn dec_byte(mut self) -> Result<Self, RuntimeError> {
 		self.memory[self.data_pointer] = self.memory[self.data_pointer].wrapping_sub(1);
 		self.instruction_pointer += 1;
 		Ok(self)
 	}
 
-	fn output<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn output(mut self) -> Result<Self, RuntimeError> {
 		print!("{}", self.memory[self.data_pointer] as char);
 		self.instruction_pointer += 1;
 		Ok(self)
 	}
 
-	fn input<'a>(mut self) -> Result<Self, RuntimeError<'a>> {
+	fn input(mut self) -> Result<Self, RuntimeError> {
 		let input: String = read!("{}\n");
-		match input.bytes().next() {
-			Some(byte) => self.memory[self.data_pointer] = byte,
-			None => {
-				return Err(RuntimeError {
-					message: "Error taking input",
-				})
-			}
-		}
+		self.memory[self.data_pointer] = input.bytes().next().ok_or(RuntimeError::InputFailed)?;
 		self.instruction_pointer += 1;
 		Ok(self)
 	}
 
-	fn open_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
+	fn open_bracket(mut self, jump_location: usize) -> Result<Self, RuntimeError> {
 		if self.memory[self.data_pointer] == 0 {
 			self.instruction_pointer = jump_location;
 		} else {
@@ -175,7 +164,7 @@ impl State {
 		Ok(self)
 	}
 
-	fn close_bracket<'a>(mut self, jump_location: usize) -> Result<Self, RuntimeError<'a>> {
+	fn close_bracket(mut self, jump_location: usize) -> Result<Self, RuntimeError> {
 		if self.memory[self.data_pointer] != 0 {
 			self.instruction_pointer = jump_location;
 		} else {
