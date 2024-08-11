@@ -73,7 +73,7 @@ fn match_brackets(mut bytecode: Bytecode) -> Result<Bytecode, CompileError> {
 			Instruction::EmptyCloseBracket => {
 				let open_location = open_locations_stack
 					.pop()
-					.expect("Brackets should be balanced");
+					.ok_or(CompileError::UnbalancedBrackets)?;
 				bytecode[i] = Instruction::CloseBracket {
 					jump_location: open_location,
 				};
